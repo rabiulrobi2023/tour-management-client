@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   Form,
   FormControl,
@@ -16,23 +16,29 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Password from "@/components/ui/password";
+import { useUserRegistrationMutation } from "@/redux/features/auth/auth.api";
+import { toast } from "sonner";
 
-
-const registrationFormSchema = z.object({
-  name: z
-    .string()
-    .min(2, { error: "Name must be at least 2 cahracter" })
-    .max(40, { error: "Name must be maximum 40 character" }),
-  email: z.email({ error: "Input must be eamil type" }),
-  password: z
-    .string()
-    .min(6, { error: " Password must be at least 6 character" })
-    .max(16, "Password maximum 16 character"),
-  confirmPassword: z
-    .string()
-    .min(6, { error: " Password must be at least 6 character" })
-    .max(16, "Password maximum 16 character"),
-}).refine((data)=> data.password===data.confirmPassword,{path:["confirmPassword"], error:"Password does not matched"});
+const registrationFormSchema = z
+  .object({
+    name: z
+      .string()
+      .min(2, { error: "Name must be at least 2 cahracter" })
+      .max(40, { error: "Name must be maximum 40 character" }),
+    email: z.email({ error: "Input must be eamil type" }),
+    password: z
+      .string()
+      .min(6, { error: " Password must be at least 6 character" })
+      .max(16, "Password maximum 16 character"),
+    confirmPassword: z
+      .string()
+      .min(6, { error: " Password must be at least 6 character" })
+      .max(16, "Password maximum 16 character"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    error: "Password does not matched",
+  });
 
 export function RegistrationForm({
   className,
@@ -47,9 +53,27 @@ export function RegistrationForm({
       confirmPassword: "",
     },
   });
-  const onsubmit = (data: z.infer<typeof registrationFormSchema>) => {
-    console.log(data);
+  const [userRegistration] = useUserRegistrationMutation();
+  const navigate= useNavigate()
+  const onsubmit = async (data: z.infer<typeof registrationFormSchema>) => {
+    const userInfo = {
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    };
+
+    try {
+      const result= await userRegistration(userInfo).unwrap();
+      toast.success("User created successfully");
+      console.log(result)
+
+      navigate("/verify",{state:userInfo.email})
+    } catch (error) {
+      console.log(error);
+      toast.error(error.data.message)
+    }
   };
+
   return (
     <div
       className={cn(
@@ -107,7 +131,7 @@ export function RegistrationForm({
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Password {...field}/>
+                        <Password {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -121,7 +145,7 @@ export function RegistrationForm({
                     <FormItem>
                       <FormLabel>Confirm Password</FormLabel>
                       <FormControl>
-                         <Password {...field}/>
+                        <Password {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
